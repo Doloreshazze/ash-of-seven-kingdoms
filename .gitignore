@@ -1,0 +1,20 @@
+# Godot generated/cache
+.godot/
+.import/
+.export/
+*.tmp
+*.log
+
+# Exported builds
+build/
+dist/
+*.apk
+*.aab
+*.exe
+*.pck
+
+# OS/IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
