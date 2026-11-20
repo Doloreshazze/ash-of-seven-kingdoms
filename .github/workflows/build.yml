@@ -28,7 +28,7 @@ jobs:
           if grep -E 'SCRIPT ERROR:|^ERROR:' /tmp/godot-import.log; then exit 1; fi
       - name: Parse and run first frames (smoke test)
         run: |
-          godot --headless --path . --quit-after 10 2>&1 | tee /tmp/godot-smoke.log
+          godot --headless --path . --verbose --quit-after 10 2>&1 | tee /tmp/godot-smoke.log
           if grep -E 'SCRIPT ERROR:|^ERROR:' /tmp/godot-smoke.log; then exit 1; fi
       - name: Export Windows demo
         run: |

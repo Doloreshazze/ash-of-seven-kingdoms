@@ -89,6 +89,13 @@ func _ready() -> void:
     show_message("Семь сердец. Семь проклятий. Одна забытая клятва.", 5.0)
     queue_redraw()
 
+func _exit_tree() -> void:
+    # Stop playback before the audio resources and scene are released.
+    for child in get_children():
+        if child is AudioStreamPlayer:
+            child.stop()
+            child.stream = null
+
 func _loop_music() -> void:
     music_player.play()
 
