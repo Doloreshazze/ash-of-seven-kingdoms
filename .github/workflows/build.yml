@@ -44,3 +44,40 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  character-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.4.1
+          use-dotnet: false
+          include-templates: false
+      - name: Import painted character
+        run: |
+          set -o pipefail
+          godot --headless --path . --import 2>&1 | tee /tmp/character-import.log
+          if grep -E 'SCRIPT ERROR:|^ERROR:' /tmp/character-import.log; then exit 1; fi
+      - name: Check animation transitions and game events
+        run: |
+          set -o pipefail
+          timeout 60s godot --headless --path . --script res://tests/character_smoke.gd 2>&1 | tee /tmp/character-check.log
+          if grep -E 'SCRIPT ERROR:|^ERROR:' /tmp/character-check.log; then exit 1; fi
+      - name: Install software display
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq xvfb libgl1-mesa-dri
+      - name: Render character review
+        env:
+          LIBGL_ALWAYS_SOFTWARE: '1'
+        run: |
+          set -o pipefail
+          timeout 90s xvfb-run -a godot --path . --rendering-method gl_compatibility --audio-driver Dummy --script res://tests/character_review.gd 2>&1 | tee /tmp/character-render.log
+          if grep -E 'SCRIPT ERROR:|^ERROR:' /tmp/character-render.log; then exit 1; fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Flamewarden-character-review
+          path: build/Flamewarden-review.png
+          if-no-files-found: error
+          retention-days: 14
+
+

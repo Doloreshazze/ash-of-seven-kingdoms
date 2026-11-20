@@ -12,6 +12,7 @@ const JUMP_SPEED: float = -700.0
 const MAX_HP: float = 100.0
 const MAX_MANA: float = 100.0
 const SAVE_PATH: String = "user://ash_save.json"
+const FlamewardenVisual = preload("res://scripts/Flamewarden.gd")
 const GOLD = Color(1.0, 0.80, 0.46)
 const CREAM = Color(1.0, 0.95, 0.84)
 const VIOLET = Color(0.74, 0.46, 1.0)
@@ -78,6 +79,8 @@ var motes: Array[Dictionary] = []
 var touches: Dictionary = {} # touch index -> virtual button
 var touch_controls: bool = false
 var did_win: bool = false
+var hero_visual = FlamewardenVisual.new()
+var hero_speed: float = 0.0
 
 func _ready() -> void:
     rng.randomize()
@@ -135,6 +138,12 @@ func _reset_run(load_checkpoint: bool = false) -> void:
     mana = MAX_MANA
     velocity_y = 0.0
     grounded = true
+    moving = false
+    facing = 1
+    hero_speed = 0.0
+    invulnerability = 0.0
+    hurt_timer = 0.0
+    hero_visual.reset()
     attack_timer = 0.0
     attack_cooldown = 0.0
     cast_cooldown = 0.0
@@ -197,9 +206,11 @@ func _physics_process(delta: float) -> void:
     if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT) or _button_down("right"):
         move_axis += 1.0
     moving = absf(move_axis) > 0.01
+    var previous_x: float = player.x
     if moving:
         facing = 1 if move_axis > 0.0 else -1
         player.x = clampf(player.x + move_axis * RUN_SPEED * delta, 48.0, WORLD_END - 60.0)
+    hero_speed = (player.x - previous_x) / maxf(delta, 0.0001)
     velocity_y += GRAVITY * delta
     player.y += velocity_y * delta
     if player.y >= GROUND:
@@ -218,6 +229,8 @@ func _physics_process(delta: float) -> void:
 func _process(delta: float) -> void:
     if game_state != "playing":
         world_time += delta * 0.35
+    var animation_delta: float = delta * 0.35 if game_state == "title" else delta
+    hero_visual.advance(animation_delta, hero_speed, grounded, velocity_y, game_state)
     queue_redraw()
 
 func _update_progress() -> void:
@@ -258,6 +271,7 @@ func _slash() -> void:
         return
     attack_timer = 0.25
     attack_cooldown = 0.48
+    hero_visual.slash()
     play_sound(sword_sound, -9.0)
     var scored := false
     for e in enemies:
@@ -277,6 +291,7 @@ func _cast() -> void:
         return
     mana -= 24.0
     cast_cooldown = 0.58
+    hero_visual.cast()
     play_sound(magic_sound, -10.0)
     _spawn_projectile(player.x + facing * 38.0, player.y - 88.0, facing * 610.0, -14.0, 34.0, "fire", false)
     _burst(player + Vector2(facing * 38.0, -88.0), Color(1.0, 0.49, 0.12), 16, 220.0)
@@ -287,11 +302,13 @@ func _damage_player(amount: float) -> void:
     hp = maxf(0.0, hp - amount)
     invulnerability = 0.85
     hurt_timer = 0.33
+    hero_visual.hurt()
     screen_shake = 0.43
     play_sound(hurt_sound, -11.0)
     _burst(player + Vector2(0, -75), RED, 18, 180.0)
     if hp <= 0.0:
         game_state = "dead"
+        hero_visual.die()
         touches.clear()
         show_message(tr_ru("Пепел помнит твоё имя...", "The ashes remember your name..."), 6.0)
 
@@ -747,33 +764,8 @@ func _draw_boss() -> void:
 
 func _draw_hero() -> void:
     var pos := Vector2(player.x - camera_x, player.y)
-    if invulnerability > 0.0 and int(world_time * 18) % 2 == 0:
-        return
-    draw_ellipse_local(Vector2(pos.x, GROUND + 3), Vector2(32, 8), Color(0,0,0,0.52))
-    var run_bob := sin(world_time * 13.0) * 4.0 if moving and grounded else 0.0
-    var t := Vector2(pos.x, pos.y + run_bob)
-    draw_set_transform(t, 0.0, Vector2(float(facing), 1.0))
-    # Windblown crimson mantle, greaves, cuirass and glowing sigil.
-    var billow := sin(world_time*7.3)*11.0
-    draw_polygon(PackedVector2Array([Vector2(-18,-111),Vector2(-65+billow,-93),Vector2(-79+billow,-12),Vector2(-16,-45)]),PackedColorArray([Color(0.72,0.17,0.18),Color(0.46,0.09,0.13),Color(0.33,0.07,0.12),Color(0.8,0.20,0.2)]))
-    draw_line(Vector2(-14,-41),Vector2(-17,-5),Color(0.13,0.17,0.22),13.0)
-    draw_line(Vector2(15,-41),Vector2(16,-5),Color(0.18,0.21,0.24),13.0)
-    draw_polygon(PackedVector2Array([Vector2(-24,-110),Vector2(20,-116),Vector2(26,-49),Vector2(-20,-45)]),PackedColorArray([Color(0.16,0.19,0.24),Color(0.33,0.37,0.37),Color(0.11,0.15,0.19),Color(0.2,0.23,0.25)]))
-    draw_polygon(PackedVector2Array([Vector2(-14,-100),Vector2(6,-101),Vector2(16,-79),Vector2(0,-73)]),PackedColorArray([Color(0.55,0.48,0.33),Color(0.66,0.58,0.38),Color(0.21,0.21,0.24),Color(0.30,0.29,0.28)]))
-    draw_circle(Vector2(1,-88), 7.0, Color(0.98,0.67,0.22))
-    draw_circle(Vector2(1,-88), 3.0, Color(1.0,0.93,0.62))
-    draw_line(Vector2(19,-101),Vector2(31,-60),Color(0.18,0.22,0.25),12.0)
-    draw_circle(Vector2(0,-131), 22, Color(0.72,0.55,0.40))
-    draw_polygon(PackedVector2Array([Vector2(-24,-133),Vector2(-17,-160),Vector2(14,-163),Vector2(24,-136),Vector2(16,-148),Vector2(-12,-146)]),PackedColorArray([Color(0.13,0.17,0.19),Color(0.28,0.30,0.32),Color(0.39,0.40,0.37),Color(0.14,0.18,0.21),Color(0.18,0.19,0.22),Color(0.25,0.26,0.26)]))
-    draw_circle(Vector2(15,-132), 3.1, Color(0.86,0.91,0.96))
-    # One-handed sword and swept slash.
-    draw_line(Vector2(31,-61),Vector2(53,-113),Color(0.57,0.64,0.66),5.0)
-    draw_line(Vector2(28,-78),Vector2(55,-67),Color(0.71,0.55,0.31),5.0)
-    if attack_timer > 0.0:
-        var transparency := attack_timer / 0.25
-        draw_arc(Vector2(13,-87), 85.0, -1.42, 1.14, 26, Color(0.58,0.94,1.0,transparency*0.82), 10.0, true)
-        draw_arc(Vector2(13,-87), 97.0, -1.42, 1.14, 26, Color(1.0,0.79,0.44,transparency*0.35), 5.0, true)
-    draw_set_transform(Vector2.ZERO)
+    var opacity: float = 0.48 if invulnerability > 0.0 and int(world_time * 18.0) % 2 == 0 else 1.0
+    hero_visual.draw_actor(self, pos, GROUND, facing, opacity)
 
 func _draw_effects() -> void:
     for p in projectiles:
@@ -900,3 +892,4 @@ func _draw_ending() -> void:
     _text(Vector2(200,376),tr_ru("Конец пролога · Продолжение следует", "End of the prologue · To be continued"),25,GOLD,HORIZONTAL_ALIGNMENT_CENTER,880)
     _menu_button(Rect2(425,492,430,86),tr_ru("ПРОЙТИ ЗАНОВО", "PLAY AGAIN"))
     _text(Vector2(0,655),tr_ru("Спасибо, что сыграли в первый прототип игры!", "Thank you for playing the first prototype!"),17,CREAM,HORIZONTAL_ALIGNMENT_CENTER,W)
+
