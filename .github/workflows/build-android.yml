@@ -69,7 +69,7 @@ jobs:
 
       - name: Check first frames
         run: |
-          godot --headless --path . --verbose --quit-after 10 2>&1 | tee /tmp/godot-smoke.log
+          timeout 60s godot --headless --path . --verbose --script res://tests/smoke.gd 2>&1 | tee /tmp/godot-smoke.log
           if grep -E 'SCRIPT ERROR:|^ERROR:' /tmp/godot-smoke.log; then exit 1; fi
 
       - name: Export debug APK
