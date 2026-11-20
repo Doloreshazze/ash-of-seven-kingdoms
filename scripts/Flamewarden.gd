@@ -159,6 +159,8 @@ func _build_pose() -> void:
     var hand := Vector2(30.0 + sin(phase + PI) * 15.0 * run_blend,
         -76.0 + bob + cos(phase) * 5.0 * run_blend + breath * 0.4)
     var offhand := Vector2(-17.0 + sin(phase) * 20.0 * run_blend, -78.0 + bob)
+    var rear_foot: Vector2 = _foot(phase + PI, true)
+    var front_foot: Vector2 = _foot(phase, false)
     var blade: float = 0.29 + 0.25 * run_blend - sin(phase) * 0.12 * run_blend
     state_name = "idle"
     if run_blend > 0.12:
@@ -191,11 +193,13 @@ func _build_pose() -> void:
         var collapse: float = _ease(death_age / 0.85)
         hip.y += sin(collapse * PI) * 14.0
         torso_angle += sin(collapse * PI) * 0.28
-        hand = hand.lerp(Vector2(36, -38), collapse)
+        hand = hand.lerp(Vector2(0, -50), collapse)
         offhand = offhand.lerp(Vector2(-15, -45), collapse)
+        rear_foot = rear_foot.lerp(Vector2(-8, -10), collapse)
+        front_foot = front_foot.lerp(Vector2(-6, -18), collapse)
     pose = {"hip": hip, "body": torso_angle, "hand": hand,
-        "offhand": offhand, "blade": blade, "rear_foot": _foot(phase + PI, true),
-        "front_foot": _foot(phase, false), "breath": breath}
+        "offhand": offhand, "blade": blade, "rear_foot": rear_foot,
+        "front_foot": front_foot, "breath": breath}
 
 func _part(canvas: Node2D, cell: int, joint: Vector2, size: Vector2, anchor: Vector2,
         angle: float = 0.0, tint: Color = Color.WHITE) -> void:
@@ -294,7 +298,9 @@ func draw_actor(canvas: Node2D, origin: Vector2, ground_y: float, facing: int,
     canvas.draw_circle(Vector2.ZERO, 1.0, Color(0.0, 0.015, 0.025, 0.4 * opacity))
     actor_transform = Transform2D(0.0, Vector2(float(facing), 1.0) * scale_factor, 0.0, origin)
     if death_age >= 0.0:
-        actor_transform = actor_transform * Transform2D(_ease(death_age / 0.85) * 1.48, Vector2.ZERO)
+        var collapse: float = _ease(death_age / 0.85)
+        actor_transform.origin.y -= collapse * 11.0 * scale_factor
+        actor_transform = actor_transform * Transform2D(collapse * 1.48, Vector2.ZERO)
     actor_tint = Color(1.0, 1.0, 1.0, opacity)
     if hurt_age < 0.12:
         actor_tint = Color(1.65, 0.8, 0.66, opacity)
