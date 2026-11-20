@@ -63,10 +63,14 @@ jobs:
           EOF
 
       - name: Import assets
-        run: godot --headless --path . --import
+        run: |
+          godot --headless --path . --import 2>&1 | tee /tmp/godot-import.log
+          if grep -E 'SCRIPT ERROR:|^ERROR:' /tmp/godot-import.log; then exit 1; fi
 
       - name: Check first frames
-        run: godot --headless --path . --quit-after 10
+        run: |
+          godot --headless --path . --quit-after 10 2>&1 | tee /tmp/godot-smoke.log
+          if grep -E 'SCRIPT ERROR:|^ERROR:' /tmp/godot-smoke.log; then exit 1; fi
 
       - name: Export debug APK
         env:

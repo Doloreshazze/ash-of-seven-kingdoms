@@ -571,7 +571,7 @@ func _draw_background() -> void:
     var zone := active_zone
     if game_state == "title":
         zone = 0
-    var mood := [Color(0.15, 0.10, 0.27, 0.28), Color(0.02, 0.16, 0.09, 0.13), Color(0.25, 0.09, 0.04, 0.30), Color(0.13, 0.02, 0.26, 0.57)][zone]
+    var mood: Color = [Color(0.15, 0.10, 0.27, 0.28), Color(0.02, 0.16, 0.09, 0.13), Color(0.25, 0.09, 0.04, 0.30), Color(0.13, 0.02, 0.26, 0.57)][zone]
     draw_rect(Rect2(0, 0, W, H), mood)
     # Slow-moving atmospheric fog and distant lights.
     for i in 12:

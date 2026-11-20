@@ -23,9 +23,13 @@ jobs:
           use-dotnet: false
           include-templates: true
       - name: Import game assets
-        run: godot --headless --path . --import
+        run: |
+          godot --headless --path . --import 2>&1 | tee /tmp/godot-import.log
+          if grep -E 'SCRIPT ERROR:|^ERROR:' /tmp/godot-import.log; then exit 1; fi
       - name: Parse and run first frames (smoke test)
-        run: godot --headless --path . --quit-after 10
+        run: |
+          godot --headless --path . --quit-after 10 2>&1 | tee /tmp/godot-smoke.log
+          if grep -E 'SCRIPT ERROR:|^ERROR:' /tmp/godot-smoke.log; then exit 1; fi
       - name: Export Windows demo
         run: |
           mkdir -p build
