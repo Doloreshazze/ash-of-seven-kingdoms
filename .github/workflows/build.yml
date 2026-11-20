@@ -45,7 +45,7 @@ jobs:
           retention-days: 14
 
   character-review:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
@@ -64,8 +64,12 @@ jobs:
           set -o pipefail
           timeout 60s godot --headless --path . --script res://tests/character_smoke.gd 2>&1 | tee /tmp/character-check.log
           if grep -E 'SCRIPT ERROR:|^ERROR:' /tmp/character-check.log; then exit 1; fi
-      - name: Install software display
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq xvfb libgl1-mesa-dri ffmpeg
+      - name: Prepare video encoder and software display
+        run: |
+          command -v xvfb-run
+          python3 -m pip install --quiet --target "$RUNNER_TEMP/character-video" imageio-ffmpeg==0.8.1
+          encoder="$(PYTHONPATH="$RUNNER_TEMP/character-video" python3 -c 'import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())')"
+          echo "CHARACTER_FFMPEG=$encoder" >> "$GITHUB_ENV"
       - name: Render character review
         env:
           LIBGL_ALWAYS_SOFTWARE: '1'
@@ -75,7 +79,7 @@ jobs:
           if grep -E 'SCRIPT ERROR:|^ERROR:' /tmp/character-render.log; then exit 1; fi
       - name: Encode motion preview
         run: |
-          ffmpeg -y -v error -framerate 24 -i build/hero-motion/frame-%03d.png -c:v libx264 -pix_fmt yuv420p -crf 22 -movflags +faststart build/Flamewarden-motion.mp4
+          "$CHARACTER_FFMPEG" -y -v error -framerate 24 -i build/hero-motion/frame-%03d.png -c:v libx264 -pix_fmt yuv420p -crf 22 -movflags +faststart build/Flamewarden-motion.mp4
           python3 - <<'PY'
           import base64
           from pathlib import Path
