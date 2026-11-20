@@ -1,0 +1,42 @@
+name: Godot CI — Validate and Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+      - name: Install Godot 4.4.1 and export templates
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.4.1
+          use-dotnet: false
+          include-templates: true
+      - name: Import game assets
+        run: godot --headless --path . --import
+      - name: Parse and run first frames (smoke test)
+        run: godot --headless --path . --quit-after 10
+      - name: Export Windows demo
+        run: |
+          mkdir -p build
+          godot --headless --path . --export-release "Windows Desktop" "build/AshOfSevenKingdoms.exe"
+      - name: Publish Windows build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ash-of-the-Seven-Kingdoms-Windows
+          path: |
+            build/AshOfSevenKingdoms.exe
+            build/AshOfSevenKingdoms.pck
+          if-no-files-found: error
+          retention-days: 14
+
