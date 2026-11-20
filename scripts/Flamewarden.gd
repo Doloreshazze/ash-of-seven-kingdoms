@@ -238,8 +238,17 @@ func _arm(canvas: Node2D, shoulder: Vector2, hand: Vector2, rear: bool) -> Vecto
 func _cape_point(u: float, v: float) -> Vector2:
     var weight: float = v * v
     var flutter: float = sin(time * 5.0 - v * 4.2) * 3.5 + sin(time * 9.0 - v * 7.0) * 1.3
-    return Vector2((u - 0.88) * 66.0 - cape_wind * weight + flutter * weight,
+    var point := Vector2((u - 0.88) * 66.0 - cape_wind * weight + flutter * weight,
         v * 100.0 - cape_wind * v * 0.32 + sin(time * 5.0 - v * 3.0) * weight * 2.0)
+    if death_age >= 0.0:
+        var angle: float = _ease(death_age / 0.85) * 1.48
+        var settle: float = _ease((death_age - 0.20) / 0.65)
+        # Let cloth settle behind the body in world space instead of keeping
+        # its upright silhouette rigidly attached to the rotated corpse.
+        var laid := Vector2((u - 0.88) * 36.0 - v * 83.0,
+            (1.0 - exp(-v * 5.0)) * 24.0 + sin(u * PI) * 1.2 * v)
+        point = point.lerp(laid.rotated(-angle), settle)
+    return point
 
 func _draw_cape(canvas: Node2D, pin: Vector2) -> void:
     canvas.draw_set_transform_matrix(actor_transform * Transform2D(0.0, pin))
