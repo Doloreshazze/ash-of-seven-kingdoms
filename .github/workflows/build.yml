@@ -65,7 +65,7 @@ jobs:
           timeout 60s godot --headless --path . --script res://tests/character_smoke.gd 2>&1 | tee /tmp/character-check.log
           if grep -E 'SCRIPT ERROR:|^ERROR:' /tmp/character-check.log; then exit 1; fi
       - name: Install software display
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq xvfb libgl1-mesa-dri
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq xvfb libgl1-mesa-dri ffmpeg
       - name: Render character review
         env:
           LIBGL_ALWAYS_SOFTWARE: '1'
@@ -73,10 +73,22 @@ jobs:
           set -o pipefail
           timeout 90s xvfb-run -a godot --path . --rendering-method gl_compatibility --audio-driver Dummy --script res://tests/character_review.gd 2>&1 | tee /tmp/character-render.log
           if grep -E 'SCRIPT ERROR:|^ERROR:' /tmp/character-render.log; then exit 1; fi
+      - name: Encode motion preview
+        run: |
+          ffmpeg -y -v error -framerate 24 -i build/hero-motion/frame-%03d.png -c:v libx264 -pix_fmt yuv420p -crf 22 -movflags +faststart build/Flamewarden-motion.mp4
+          python3 - <<'PY'
+          import base64
+          from pathlib import Path
+          encoded = base64.b64encode(Path('build/Flamewarden-motion.mp4').read_bytes()).decode('ascii')
+          for offset in range(0, len(encoded), 6000):
+              print('CHARACTER_MOTION:' + encoded[offset:offset + 6000])
+          PY
       - uses: actions/upload-artifact@v4
         with:
           name: Flamewarden-character-review
-          path: build/Flamewarden-review.png
+          path: |
+            build/Flamewarden-review.png
+            build/Flamewarden-motion.mp4
           if-no-files-found: error
           retention-days: 14
 

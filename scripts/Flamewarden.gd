@@ -159,7 +159,7 @@ func _build_pose() -> void:
     var hand := Vector2(30.0 + sin(phase + PI) * 15.0 * run_blend,
         -76.0 + bob + cos(phase) * 5.0 * run_blend + breath * 0.4)
     var offhand := Vector2(-17.0 + sin(phase) * 20.0 * run_blend, -78.0 + bob)
-    var blade: float = 0.29 - sin(phase) * 0.16 * run_blend
+    var blade: float = 0.29 + 0.25 * run_blend - sin(phase) * 0.12 * run_blend
     state_name = "idle"
     if run_blend > 0.12:
         state_name = "run"
@@ -172,7 +172,7 @@ func _build_pose() -> void:
         state_name = "cast"
         var charge: float = _ease(cast_age / 0.10)
         var recover: float = _ease((cast_age - 0.25) / 0.29)
-        offhand = offhand.lerp(Vector2(43, -109), charge * (1.0 - recover))
+        offhand = offhand.lerp(Vector2(43, -83), charge * (1.0 - recover))
         torso_angle -= sin(cast_age / CAST_DURATION * PI) * 0.11
     if sword_age < SWORD_DURATION:
         state_name = "slash"
@@ -329,7 +329,7 @@ func draw_actor(canvas: Node2D, origin: Vector2, ground_y: float, facing: int,
         if cast_age < 0.35:
             offhand = _arm(canvas, rear_shoulder, pose["offhand"], false)
         var energy: float = sin(clampf(cast_age / CAST_DURATION, 0.0, 1.0) * PI)
-        var flame := offhand + Vector2(5, -7)
+        var flame := offhand + Vector2(5, 0)
         _glow(canvas, flame, 28.0, Color(1.0, 0.29, 0.04), energy * 0.11)
         canvas.draw_set_transform_matrix(actor_transform)
         canvas.draw_arc(flame, 12.0 + energy * 6.0, time * 5.0, time * 5.0 + TAU * 0.8,
